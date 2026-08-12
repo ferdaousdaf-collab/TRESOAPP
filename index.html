@@ -566,7 +566,11 @@ thead th{position:sticky!important;top:0!important;z-index:30!important;backgrou
         <span id="r-bq" style="font-weight:700;font-size:13px;color:#2563eb">-1 030 090 MAD</span>
       </div>
       <div class="rl">
-        <span style="font-weight:700;font-size:13px">SOLDE GLOBAL</span>
+        <span style="font-weight:600;font-size:12px">+ Facilités de caisse (plafonds)</span>
+        <span id="r-fc" style="font-weight:700;font-size:13px;color:#7c3aed">0 MAD</span>
+      </div>
+      <div class="rl">
+        <span style="font-weight:700;font-size:13px">SOLDE GLOBAL (facilités incluses)</span>
         <span id="r-global" style="font-weight: 800; font-size: 16px; color: rgb(220, 38, 38);">-2 840 464 MAD</span>
       </div>
     </div>
@@ -1724,6 +1728,13 @@ function bqTotal(m) {
   var d = getM(m);
   return (d.banques || []).reduce(function(s,b){return s+(b.solde||0);},0);
 }
+function bqPlafondTotal(m) {
+  var d = getM(m);
+  return (d.banques || []).reduce(function(s,b){return s+(b.plafond||0);},0);
+}
+function bqDisponibleTotal(m) {
+  return bqTotal(m) + bqPlafondTotal(m);
+}
 
 function fmt(n) { return Math.round(n||0).toLocaleString('fr-FR'); }
 function fmtM(n) { return fmt(n) + ' MAD'; }
@@ -2450,8 +2461,10 @@ function calcTresorerie(d) {
   var dec = frs + chf + sdl;
   var net = enc - dec;
   var bqTot = bqTotal(currentMonth);
-  var global = net + bqTot;
-  return {enc:enc, frs:frs, chf:chf, sdl:sdl, dec:dec, net:net, bqTot:bqTot, global:global};
+  var bqPlafond = bqPlafondTotal(currentMonth);
+  var bqDisponible = bqTot + bqPlafond;
+  var global = net + bqDisponible;
+  return {enc:enc, frs:frs, chf:chf, sdl:sdl, dec:dec, net:net, bqTot:bqTot, bqPlafond:bqPlafond, bqDisponible:bqDisponible, global:global};
 }
 function calcTresorerieMois(m) {
   var d = getM(m);
@@ -2462,7 +2475,8 @@ function calcTresorerieMois(m) {
   var dec = frs + chf + sdl;
   var net = enc - dec;
   var bqTot = bqTotal(m);
-  return {enc:enc, frs:frs, chf:chf, sdl:sdl, dec:dec, net:net, bqTot:bqTot, global:net+bqTot};
+  var bqDisponible = bqDisponibleTotal(m);
+  return {enc:enc, frs:frs, chf:chf, sdl:sdl, dec:dec, net:net, bqTot:bqTot, bqDisponible:bqDisponible, global:net+bqDisponible};
 }
 
 // ================================================================
@@ -2538,6 +2552,7 @@ function refreshAll() {
   document.getElementById('r-sdl').textContent = fmtM(sdl);
   var rnet = document.getElementById('r-net'); rnet.textContent=fmtM(net); rnet.style.color=net>=0?'#4d8f75':'#c1685f';
   document.getElementById('r-bq').textContent = canSeeBank() ? fmtM(bqTot) : MASK_TXT;
+  var rfc = document.getElementById('r-fc'); if (rfc) rfc.textContent = canSeeBank() ? fmtM(c.bqPlafond||0) : MASK_TXT;
   var rg = document.getElementById('r-global'); rg.textContent = canSeeBank() ? fmtM(global) : MASK_TXT; rg.style.color=global>=0?'#4d8f75':'#c1685f';
 
   // Synthèse bancaire
@@ -2874,13 +2889,15 @@ function renderSdlTable(d) {
 }
 
 function renderRecap(d, enc, frs, chf, sdl, net, global, bqTot) {
+  var fcTot = bqPlafondTotal(currentMonth);
   document.getElementById('recap-body').innerHTML =
     '<div class="rl"><span style="color:#64748b">Encaissements ('+d.enc.length+')</span><span class="green" style="font-weight:700">'+fmtM(enc)+'</span></div>'
     +'<div class="rl"><span style="color:#64748b">Fournisseurs ('+d.frs.length+')</span><span class="red" style="font-weight:700">'+fmtM(frs)+'</span></div>'
     +'<div class="rl"><span style="color:#64748b">Charges fixes ('+d.chf.length+')</span><span class="red" style="font-weight:700">'+fmtM(chf)+'</span></div>'
     +'<div class="rl"><span style="color:#64748b">S.DL Instance ('+d.sdl.length+')</span><span class="amber" style="font-weight:700">'+fmtM(sdl)+'</span></div>'
     +'<div class="rl"><span style="color:#64748b">Solde bancaire ('+d.banques.length+' compte(s))</span><span class="blue" style="font-weight:700">'+fmtM(bqTot)+'</span></div>'
-    +'<div class="rl" style="border-top:2px solid #e2e8f0;margin-top:5px;padding-top:8px"><span style="font-weight:700">Solde global</span><span style="font-weight:800;font-size:15px;color:'+(global>=0?'#4d8f75':'#c1685f')+'">'+fmtM(global)+'</span></div>';
+    +'<div class="rl"><span style="color:#64748b">Facilités de caisse (plafonds)</span><span style="font-weight:700;color:#7c3aed">'+fmtM(fcTot)+'</span></div>'
+    +'<div class="rl" style="border-top:2px solid #e2e8f0;margin-top:5px;padding-top:8px"><span style="font-weight:700">Solde global (facilités incluses)</span><span style="font-weight:800;font-size:15px;color:'+(global>=0?'#4d8f75':'#c1685f')+'">'+fmtM(global)+'</span></div>';
   var totals = {};
   d.enc.concat(d.frs).concat(d.chf).concat(d.sdl).forEach(function(x){var m=x.moyen||x.type;totals[m]=(totals[m]||0)+x.montant;});
   var entries = Object.entries(totals).sort(function(a,b){return b[1]-a[1];});
