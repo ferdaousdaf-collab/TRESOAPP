@@ -1247,30 +1247,19 @@ var _fileHandle = null; // handle vers le fichier HTML ouvert
 // --- Chargement : lit localStorage EN PRIORITÉ, puis données embarquées ---
 function loadDB() {
   var loaded = false;
-
-  // SOURCE 1 : localStorage treso26_v2
+  var embedded = null;
   try {
-    var tag0 = document.getElementById('__TRESO_DATA__');
-    if (tag0 && tag0.textContent.trim() && tag0.textContent.trim() !== 'null') {
-      var emb0 = JSON.parse(tag0.textContent.trim());
-      if (emb0 && emb0.db && Array.isArray(emb0.users)) {
-        // Ce fichier embarque un système multi-utilisateurs : il est prioritaire
-        // sur d'anciennes données déjà présentes dans le navigateur (localStorage).
-        DB = emb0.db || {}; USERS = emb0.users || []; HISTORY = emb0.history || [];
-        if (emb0.fc_plafond) FC_PLAFOND = emb0.fc_plafond;
-        if (emb0.budget) BUDGET = emb0.budget;
-        if (emb0.seuils) SEUILS = Object.assign(SEUILS, emb0.seuils);
-        if (emb0.notes) NOTES = emb0.notes;
-        if (emb0.relances) RELANCES = emb0.relances;
-        if (emb0.recurrentes) RECURRENTES = emb0.recurrentes;
-        if (emb0.app_settings) APP_SETTINGS = Object.assign(APP_SETTINGS, emb0.app_settings);
-        try { localStorage.setItem('treso26_v2', JSON.stringify(emb0)); } catch(e) {}
-        return;
-      }
+    var tagE = document.getElementById('__TRESO_DATA__');
+    if (tagE && tagE.textContent.trim() && tagE.textContent.trim() !== 'null') {
+      embedded = JSON.parse(tagE.textContent.trim());
     }
   } catch(e) {}
 
-  // SOURCE 1 : localStorage treso26_v2
+  // SOURCE 1 : localStorage treso26_v2 — TOUJOURS prioritaire s'il existe :
+  // c'est ici que se trouve le vrai travail saisi par l'utilisateur.
+  // Le fichier livré (données embarquées) ne sert qu'au tout premier lancement,
+  // ou pour compléter un champ manquant (ex: migration du système utilisateurs),
+  // JAMAIS pour remplacer des données déjà saisies.
   try {
     var s = localStorage.getItem('treso26_v2');
     if (s) {
@@ -1287,6 +1276,13 @@ function loadDB() {
       if (d.recurrentes) RECURRENTES = d.recurrentes;
       if (d.app_settings) APP_SETTINGS = Object.assign(APP_SETTINGS, d.app_settings);
       loaded = true;
+      // Migration douce : si aucun compte utilisateur n'existe encore dans les
+      // données déjà présentes, on récupère uniquement la liste des comptes
+      // depuis le fichier livré, sans toucher au reste (DB, historique...).
+      if ((!USERS || !USERS.length) && embedded && Array.isArray(embedded.users) && embedded.users.length) {
+        USERS = embedded.users;
+        saveDB();
+      }
     }
   } catch(e) {}
 
@@ -1298,7 +1294,8 @@ function loadDB() {
     } catch(e) {}
   }
 
-  // SOURCE 3 : données embarquées dans le fichier HTML
+  // SOURCE 3 : données embarquées dans le fichier HTML — uniquement si rien
+  // n'a encore été trouvé dans le navigateur (tout premier lancement).
   if (!loaded) {
     try {
       var tag = document.getElementById('__TRESO_DATA__');
