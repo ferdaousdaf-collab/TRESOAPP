@@ -4459,12 +4459,84 @@ var CHAT_FAQ = [
   { k:['chatbot','assistant','tu es qui','qui es-tu'], a:"Je suis l'assistant intégré de TrésoApp. Je réponds uniquement à partir des données de cette application et de son fonctionnement — je ne me connecte à aucun service extérieur, vos données restent privées." },
 ];
 
+// Détecte un mois nommé dans la question (ex: "en septembre", "pour octobre 2026")
+function parseMonthFromText(ql) {
+  for (var i = 0; i < MONTHS.length; i++) {
+    var parts = MONTHS[i].split(' ');
+    var moisNom = parts[0].toLowerCase();
+    var annee = parts[1];
+    if (ql.indexOf(moisNom) > -1) {
+      if (ql.indexOf(annee) > -1) return MONTHS[i];
+      if (!/20(2[5-9]|3\d)/.test(ql)) return MONTHS[i]; // pas d'année précisée : on prend le mois trouvé
+    }
+  }
+  return null;
+}
+
+// Petite tolérance aux fautes de frappe (distance de Levenshtein simplifiée)
+function fuzzyIncludes(text, word) {
+  if (text.indexOf(word) > -1) return true;
+  if (word.length < 5) return false;
+  var re = new RegExp(word.slice(0,4), 'i');
+  return re.test(text);
+}
+
+// Analyse intelligente : lit plusieurs mois, détecte tendances, retards, recommandations
+function chatSmartAnalysis() {
+  var d = getM(currentMonth);
+  var c = calcTresorerie(d);
+  var health = computeHealth(d, c.net, c.global, c.bqTot);
+  var healthTxt = {green:'🟢 saine', orange:'🟡 à surveiller', red:'🔴 critique'}[health];
+
+  // Tendance vs mois précédent
+  var idx = MONTHS.indexOf(currentMonth);
+  var prevTxt = '';
+  if (idx > 0) {
+    var prevMonth = MONTHS[idx-1];
+    var cp = calcTresorerieMois(prevMonth);
+    var delta = c.net - cp.net;
+    if (Math.abs(delta) > 1) {
+      prevTxt = ' Le solde net ' + (delta >= 0 ? 'progresse' : 'se dégrade') + ' de ' + fmtM(Math.abs(delta)) + ' par rapport à ' + prevMonth + '.';
+    }
+  }
+
+  // Top retards (frs + sdl) par montant
+  var lateItems = [];
+  d.frs.filter(function(x){return x.statut==='En retard';}).forEach(function(x){lateItems.push({nom:x.nom, montant:x.montant});});
+  d.sdl.filter(function(x){return x.statut==='En retard';}).forEach(function(x){lateItems.push({nom:x.nom, montant:x.montant});});
+  lateItems.sort(function(a,b){return b.montant-a.montant;});
+  var topLate = lateItems.slice(0,3).map(function(x){return x.nom+' ('+fmtM(x.montant)+')';}).join(', ');
+
+  // Utilisation facilité de caisse
+  var fcTxt = '';
+  if (canSeeBank() && c.bqPlafond > 0) {
+    var used = Math.max(0, -c.bqTot);
+    var pct = Math.round(used / c.bqPlafond * 100);
+    if (pct > 0) fcTxt = ' Facilité de caisse utilisée à ' + pct + '%.';
+  }
+
+  var parts = [];
+  parts.push('Analyse de ' + currentMonth + ' : situation ' + healthTxt + '.' + prevTxt);
+  if (canSeeBank()) parts.push('Solde global (facilités incluses) : ' + fmtM(c.global) + '.' + fcTxt);
+  if (topLate) parts.push('Retards les plus importants : ' + topLate + '.');
+  else parts.push('Aucun retard fournisseur/créance significatif ce mois.');
+  if (health === 'red') parts.push("Recommandation : priorisez le règlement des retards les plus anciens et vérifiez vos facilités disponibles avant tout nouvel engagement.");
+  else if (health === 'orange') parts.push('Recommandation : surveillez les échéances des 7 prochains jours et anticipez les encaissements en attente.');
+  else parts.push('Recommandation : aucune action urgente, poursuivez le suivi habituel.');
+  return parts.join(' ');
+}
+
 // Questions dynamiques : réponses calculées à partir des vraies données de l'app
 function chatDynamicAnswer(q){
   var ql = q.toLowerCase();
-  var d = getM(currentMonth);
+  var askedMonth = parseMonthFromText(ql) || currentMonth;
+  var d = getM(askedMonth);
   var c = calcTresorerie(d);
+  var forMonthTxt = askedMonth === currentMonth ? '' : ' (' + askedMonth + ')';
 
+  if (/analys|résum|conseil|recommand|comment ça va|intelligent/.test(ql)) {
+    return chatSmartAnalysis();
+  }
   if (/qui suis-je|mon rôle|mon compte|je suis connecté/.test(ql)) {
     return CURRENT_USER ? ('Vous êtes connecté en tant que ' + CURRENT_USER.name + ', rôle ' + ROLE_LABEL(CURRENT_USER.role) + '.') : "Vous n'êtes pas connecté.";
   }
@@ -4473,31 +4545,37 @@ function chatDynamicAnswer(q){
   }
   if (/(solde|trésorerie).*(global|total)|global.*solde/.test(ql)) {
     if (!canSeeBank()) return "Le solde global est masqué pour votre compte.";
-    return 'Le solde global de ' + currentMonth + ' (facilités de caisse incluses) est de ' + fmtM(c.global) + '.';
+    return 'Le solde global de ' + askedMonth + ' (facilités de caisse incluses) est de ' + fmtM(c.global) + '.';
   }
   if (/(combien|solde).*(banque|bancaire)/.test(ql)) {
     if (!canSeeBank()) return "Les soldes bancaires sont masqués pour votre compte.";
-    return 'Le solde bancaire total de ' + currentMonth + ' est de ' + fmtM(c.bqTot) + ', avec ' + fmtM(c.bqPlafond) + ' de facilités de caisse disponibles en plus.';
+    return 'Le solde bancaire total de ' + askedMonth + ' est de ' + fmtM(c.bqTot) + ', avec ' + fmtM(c.bqPlafond) + ' de facilités de caisse disponibles en plus.';
   }
   if (/combien.*(fournisseur|frs).*(retard)|fournisseur.*retard/.test(ql)) {
     var nbRetard = d.sdl.filter(function(x){return x.statut==='En retard';}).length;
     var mntRetard = d.sdl.filter(function(x){return x.statut==='En retard';}).reduce(function(s,x){return s+x.montant;},0);
-    return nbRetard + ' créance(s) en retard en S.DL Paiement pour ' + currentMonth + ', pour un total de ' + fmtM(mntRetard) + '.';
+    return nbRetard + ' créance(s) en retard en S.DL Paiement pour ' + askedMonth + ', pour un total de ' + fmtM(mntRetard) + '.';
+  }
+  if (/top|plus important|plus gros|principal.*fournisseur|fournisseur.*doit le plus/.test(ql)) {
+    var all = d.frs.concat(d.sdl.map(function(x){return {nom:x.nom, montant:x.montant};}));
+    all.sort(function(a,b){return b.montant-a.montant;});
+    if (!all.length) return "Aucune donnée fournisseur pour "+askedMonth+".";
+    return 'Principales dettes fournisseurs pour ' + askedMonth + ' : ' + all.slice(0,5).map(function(x){return x.nom+' — '+fmtM(x.montant);}).join(' | ') + '.';
   }
   if (/combien.*(encaissement)/.test(ql)) {
-    return d.enc.length + ' encaissement(s) saisi(s) pour ' + currentMonth + ', total ' + fmtM(c.enc) + '.';
+    return d.enc.length + ' encaissement(s) saisi(s) pour ' + askedMonth + ', total ' + fmtM(c.enc) + '.';
   }
   if (/combien.*(fournisseur)/.test(ql) && !/retard/.test(ql)) {
-    return d.frs.length + ' ligne(s) fournisseur pour ' + currentMonth + ', total ' + fmtM(c.frs) + '.';
+    return d.frs.length + ' ligne(s) fournisseur pour ' + askedMonth + ', total ' + fmtM(c.frs) + '.';
   }
   if (/combien.*(charge)/.test(ql)) {
-    return d.chf.length + ' charge(s) fixe(s) pour ' + currentMonth + ', total ' + fmtM(c.chf) + '.';
+    return d.chf.length + ' charge(s) fixe(s) pour ' + askedMonth + ', total ' + fmtM(c.chf) + '.';
   }
   if (/combien.*(utilisateur|compte utilisateur)/.test(ql)) {
     return USERS.length + ' utilisateur(s) enregistré(s) dans l\'application.';
   }
   if (/combien.*(banque|compte bancaire)/.test(ql)) {
-    return d.banques.length + ' compte(s) bancaire(s) enregistré(s) pour ' + currentMonth + '.';
+    return d.banques.length + ' compte(s) bancaire(s) enregistré(s) pour ' + askedMonth + '.';
   }
   return null;
 }
@@ -4507,11 +4585,11 @@ function chatAnswer(q){
   if (dyn) return dyn;
   var ql = q.toLowerCase(); var best=null, bestScore=0;
   CHAT_FAQ.forEach(function(item){
-    var score = item.k.filter(function(kw){return ql.indexOf(kw)>-1;}).length;
+    var score = item.k.filter(function(kw){return fuzzyIncludes(ql, kw);}).length;
     if (score > bestScore) { bestScore = score; best = item; }
   });
   if (best) return best.a;
-  return "Je n'ai pas trouvé de réponse précise. Vous pouvez me demander par exemple : « quel est mon solde global ? », « combien de fournisseurs en retard ? », « comment gérer les droits ? », « comment importer un fichier ? », ou toute autre question sur le fonctionnement de TrésoApp.";
+  return "Je n'ai pas trouvé de réponse précise. Essayez par exemple : « analyse ma situation », « quel est mon solde global ? », « quels sont mes plus gros fournisseurs ? », « combien de retards en septembre ? », ou toute question sur le fonctionnement de TrésoApp.";
 }
 function chatAddMsg(text, who){
   var body = document.getElementById('chatBody');
@@ -4523,7 +4601,7 @@ function chatAddMsg(text, who){
 }
 function chatSuggestionsInit(){
   var wrap = document.getElementById('chatSuggestions');
-  var chips = ["Quel est mon solde global ?","Combien de fournisseurs en retard ?","Comment importer un fichier ?","Comment gérer les droits ?"];
+  var chips = ["Analyse ma situation","Quel est mon solde global ?","Mes plus gros fournisseurs ?","Comment importer un fichier ?"];
   wrap.innerHTML = chips.map(function(c){return '<div class="chat-chip">'+c+'</div>';}).join('');
   wrap.querySelectorAll('.chat-chip').forEach(function(ch){ ch.onclick = function(){ chatSend(ch.textContent); }; });
 }
