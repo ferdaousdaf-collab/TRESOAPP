@@ -743,6 +743,11 @@ thead th{position:sticky!important;top:0!important;z-index:30!important;backgrou
       <tbody id="prev-body" style="position: static; transform: none;"></tbody></table></div>
     </div>
   </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="ch"><span class="ct"><i class="ti ti-history"></i> Historique des imports (annulation possible)</span></div>
+    <div id="import-batches-list" style="font-size:12px;color:#94a3b8;">Aucun import effectué pour le moment.</div>
+  </div>
 </div>
 
 <!-- ============================================================ ENCAISSEMENTS -->
@@ -1231,6 +1236,7 @@ thead th{position:sticky!important;top:0!important;z-index:30!important;backgrou
 let DB = {}, currentMonth = 'Juin 2026', PWD = '';
 let USERS = []; // [{name, pass, role}]
 let CURRENT_USER = null; // {name, role}
+let IMPORT_BATCHES = []; // historique des imports Excel, pour annulation ciblée
 let charts = {comp:null,charges:null,enc:null,statFrs:null,statChf:null,prevision:null};
 let HISTORY = [];
 let autosaveTimer = null;
@@ -1288,6 +1294,7 @@ function loadDB() {
       if (d.notes) NOTES = d.notes;
       if (d.relances) RELANCES = d.relances;
       if (d.recurrentes) RECURRENTES = d.recurrentes;
+      if (d.import_batches) IMPORT_BATCHES = d.import_batches;
       if (d.app_settings) APP_SETTINGS = Object.assign(APP_SETTINGS, d.app_settings);
       loaded = true;
       // Migration douce : si aucun compte utilisateur n'existe encore dans les
@@ -1323,6 +1330,7 @@ function loadDB() {
           if (emb.notes) NOTES = emb.notes;
           if (emb.relances) RELANCES = emb.relances;
           if (emb.recurrentes) RECURRENTES = emb.recurrentes;
+          if (emb.import_batches) IMPORT_BATCHES = emb.import_batches;
           if (emb.app_settings) APP_SETTINGS = Object.assign(APP_SETTINGS, emb.app_settings);
           try { localStorage.setItem('treso26_v2', JSON.stringify(emb)); } catch(e) {}
         }
@@ -1334,7 +1342,7 @@ function loadDB() {
 // --- Sauvegarde : localStorage + fichier HTML si handle disponible ---
 function saveDB() {
   var payload = {db: DB, pwd: PWD, users: USERS, history: (HISTORY||[]).slice(0,500), fc_plafond: FC_PLAFOND,
-    budget: BUDGET, seuils: SEUILS, notes: NOTES, relances: RELANCES, recurrentes: RECURRENTES, app_settings: APP_SETTINGS};
+    budget: BUDGET, seuils: SEUILS, notes: NOTES, relances: RELANCES, recurrentes: RECURRENTES, app_settings: APP_SETTINGS, import_batches: IMPORT_BATCHES};
 
   // Toujours sauvegarder dans localStorage
   try {
@@ -2074,6 +2082,7 @@ function nav(page, el) {
   if (page==='budget') buildBudget();
   if (page==='rapport') buildRapport();
   if (page==='historique') renderHistory();
+  if (page==='import') renderImportBatches();
   if (page==='users') renderUsersPage();
   if (page==='settings') { document.getElementById('clear-month-lbl').textContent=currentMonth; renderFavList(); loadSeuilsUI(); loadNotifSettingsUI(); }
   if (page==='bibliotheque') { refreshAll(); }
@@ -3314,6 +3323,8 @@ function confirmImport() { if (!guardEdit('import')) return;
     : 'frs';
   var added = 0, distributed = {};
   var TYPE_LABELS = {enc:'Encaissements', frs:'Fournisseurs', chf:'Charges fixes', sdl:'S.DL'};
+  var batchId = 'imp_' + Date.now();
+  var batchLocations = []; // {month, type, id} pour permettre l'annulation ciblée
 
   function detectMoyen(ref, extra) {
     var moyen = 'Virement';
@@ -3331,6 +3342,7 @@ function confirmImport() { if (!guardEdit('import')) return;
     var nom = String(r.row[0]||'').trim();
     var mnt = parseFloat(String(r.row[3]).replace(/[^\d.,-]/g,'').replace(',','.'));
     if (!nom || isNaN(mnt) || mnt <= 0) return;
+    var itemId = Date.now()+added+Math.floor(Math.random()*1000);
 
     if (importType === 'sdl') {
       var delai = String(r.row[4]||'').replace(/[^\d]/g,'') || '0';
@@ -3338,8 +3350,9 @@ function confirmImport() { if (!guardEdit('import')) return;
       var dateFournie = String(r.row[5]||'').trim();
       var echeance = /^\d{4}-\d{2}-\d{2}/.test(dateFournie) ? dateFournie : addDaysISO(dateFacture, delai);
       var targetMonth = monthLabelFromDate(echeance) || monthLabelFromDate(dateFacture) || currentMonth;
-      getM(targetMonth).sdl.push({id:Date.now()+added, nom:nom, montant:mnt, date:dateFacture, delai:delai, moyen:'Virement', statut:'En retard'});
+      getM(targetMonth).sdl.push({id:itemId, nom:nom, montant:mnt, date:dateFacture, delai:delai, moyen:'Virement', statut:'En retard', _imp:batchId});
       distributed[targetMonth] = (distributed[targetMonth]||0) + 1;
+      batchLocations.push({month:targetMonth, type:'sdl', id:itemId});
       memorize(nom);
 
     } else if (importType === 'chf') {
@@ -3352,16 +3365,18 @@ function confirmImport() { if (!guardEdit('import')) return;
       if (isNaN(mntC) || mntC <= 0) return;
       var moyenC = detectMoyen('', String(r.row[4]||''));
       var targetMonthC = monthLabelFromDate(dateC) || currentMonth;
-      getM(targetMonthC).chf.push({id:Date.now()+added, rubrique:rubrique, ben:ben, date:dateC, moyen:moyenC, montant:mntC, statut:'À décaisser'});
+      getM(targetMonthC).chf.push({id:itemId, rubrique:rubrique, ben:ben, date:dateC, moyen:moyenC, montant:mntC, statut:'À décaisser', _imp:batchId});
       distributed[targetMonthC] = (distributed[targetMonthC]||0) + 1;
+      batchLocations.push({month:targetMonthC, type:'chf', id:itemId});
 
     } else if (importType === 'enc') {
       var refE = String(r.row[2]||'');
       var moyenE = detectMoyen(refE, String(r.row[4]||''));
       var dateE = String(r.row[1]||'').trim();
       var targetMonthE = monthLabelFromDate(dateE) || currentMonth;
-      getM(targetMonthE).enc.push({id:Date.now()+added, client:nom, date:dateE, montant:mnt, moyen:moyenE, ref:refE, statut:'À encaisser'});
+      getM(targetMonthE).enc.push({id:itemId, client:nom, date:dateE, montant:mnt, moyen:moyenE, ref:refE, statut:'À encaisser', _imp:batchId});
       distributed[targetMonthE] = (distributed[targetMonthE]||0) + 1;
+      batchLocations.push({month:targetMonthE, type:'enc', id:itemId});
       memorize(nom);
 
     } else { // frs
@@ -3369,20 +3384,54 @@ function confirmImport() { if (!guardEdit('import')) return;
       var moyen = detectMoyen(ref, String(r.row[4]||''));
       var dateVal = String(r.row[1]||'').trim();
       var targetMonthF = monthLabelFromDate(dateVal) || currentMonth;
-      getM(targetMonthF).frs.push({id:Date.now()+added, nom:nom, ref:ref, date:dateVal, moyen:moyen, montant:mnt, statut:'À décaisser'});
+      getM(targetMonthF).frs.push({id:itemId, nom:nom, ref:ref, date:dateVal, moyen:moyen, montant:mnt, statut:'À décaisser', _imp:batchId});
       distributed[targetMonthF] = (distributed[targetMonthF]||0) + 1;
+      batchLocations.push({month:targetMonthF, type:'frs', id:itemId});
       memorize(nom);
     }
     added++;
   });
   var detail = Object.keys(distributed).map(function(m){return m+' : '+distributed[m]+' ligne(s)';}).join(' | ');
+  IMPORT_BATCHES.unshift({id:batchId, type:importType, typeLabel:TYPE_LABELS[importType], count:added, detail:detail, date:new Date().toISOString(), locations:batchLocations});
+  if (IMPORT_BATCHES.length > 20) IMPORT_BATCHES.length = 20;
   addHistory('IMPORT EXCEL', added + ' lignes (' + TYPE_LABELS[importType] + ') réparties automatiquement — ' + detail, 'import');
-  saveDB(); refreshAll();
-  alert(added + ' lignes importées et réparties automatiquement par mois :\n' + detail);
+  saveDB(); refreshAll(); renderImportBatches();
+  alert(added + ' lignes importées et réparties automatiquement par mois :\n' + detail + '\n\nEn cas d\'erreur, vous pouvez annuler cet import précis depuis le bas de la page Import Excel.');
   document.getElementById('import-res').style.display='none';
   document.getElementById('import-validation').style.display='none';
   document.getElementById('xlsxFile').value='';
   _importedRows = [];
+}
+
+function renderImportBatches() {
+  var el = document.getElementById('import-batches-list');
+  if (!el) return;
+  if (!IMPORT_BATCHES.length) { el.innerHTML = 'Aucun import effectué pour le moment.'; return; }
+  el.innerHTML = IMPORT_BATCHES.map(function(b, i) {
+    var d = new Date(b.date);
+    var dateTxt = d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f6f8f9;font-size:12px;">'
+      + '<div><strong>' + b.typeLabel + '</strong> — ' + b.count + ' ligne(s) — ' + dateTxt + '<br><span style="color:#94a3b8;font-size:10.5px">' + escHtml(b.detail) + '</span></div>'
+      + (canDeleteM(b.type) ? '<button class="btn btn-red" style="padding:5px 10px;font-size:11px;white-space:nowrap;margin-left:10px" onclick="undoImportBatch(' + i + ')"><i class="ti ti-arrow-back-up"></i> Annuler cet import</button>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function undoImportBatch(i) {
+  var b = IMPORT_BATCHES[i];
+  if (!b) return;
+  if (!confirm('Annuler cet import (' + b.typeLabel + ', ' + b.count + ' ligne(s)) ? Toutes les lignes créées par cet import précis seront supprimées, dans tous les mois concernés.')) return;
+  var removed = 0;
+  b.locations.forEach(function(loc) {
+    var d = getM(loc.month);
+    var arr = d[loc.type];
+    var idx = arr.findIndex(function(x){ return x.id === loc.id; });
+    if (idx >= 0) { arr.splice(idx, 1); removed++; }
+  });
+  IMPORT_BATCHES.splice(i, 1);
+  addHistory('IMPORT ANNULÉ', removed + ' ligne(s) (' + b.typeLabel + ') supprimées — import du ' + new Date(b.date).toLocaleDateString('fr-FR'), 'edit');
+  saveDB(); refreshAll(); renderImportBatches();
+  alert(removed + ' ligne(s) supprimée(s). L\'import est annulé.');
 }
 
 // ================================================================
