@@ -3248,9 +3248,23 @@ function handleFile(input) {
       document.getElementById('import-res').style.display = 'block';
       document.getElementById('import-msg').textContent = file.name + ' — ' + rows.length + ' lignes détectées (' + validRows.length + ' importables)';
 
+      var importTypeNow = document.getElementById('importTypeSdl').checked ? 'sdl'
+        : document.getElementById('importTypeChf').checked ? 'chf'
+        : document.getElementById('importTypeEnc').checked ? 'enc'
+        : 'frs';
+
       document.getElementById('prev-body').innerHTML = rows.slice(0,20).map(function(r){
         var nom=String(r.row[0]||'').trim();
-        var dateVal=String(r.row[1]||'').trim();
+        var dateVal, dateLabel;
+        if (importTypeNow === 'sdl') {
+          // Priorité à la date déjà calculée (colonne F) si présente et valide, sinon recalcul facture+délai
+          var dateFournie = String(r.row[5]||'').trim();
+          var dateFacture = String(r.row[1]||'').trim();
+          var delaiP = String(r.row[4]||'').replace(/[^\d]/g,'') || '0';
+          dateVal = /^\d{4}-\d{2}-\d{2}/.test(dateFournie) ? dateFournie : addDaysISO(dateFacture, delaiP);
+        } else {
+          dateVal = String(r.row[1]||'').trim();
+        }
         var ref=String(r.row[2]||'');
         var moyen='Virement';
         if(/lcn/i.test(ref)||/lcn/i.test(String(r.row[4]||'')))moyen='LCN';
@@ -3265,7 +3279,7 @@ function handleFile(input) {
         var valid_mnt = mnt > 0;
         var valid_date = dateVal.length > 0;
         var valIcon = (!valid_nom||!valid_mnt) ? '<span class="val-err">✗ Ignoré</span>' : (!valid_date) ? '<span class="val-warn">⚠ Sans date</span>' : '<span class="val-ok">✓ OK</span>';
-        return '<tr><td style="font-size:11px;color:#64748b">'+escHtml(r.sheet)+'</td><td>'+escHtml(nom.substring(0,25)||'—')+'</td><td style="font-size:11px;font-family:monospace">'+escHtml(ref.substring(0,20)||'—')+'</td><td style="font-size:11px">'+escHtml(dateVal||'—')+'</td><td class="amt">'+(mnt?fmt(mnt):'—')+'</td><td>'+pillM(moyen)+'</td><td>'+valIcon+'</td></tr>';
+        return '<tr><td style="font-size:11px;color:#64748b">'+escHtml(r.sheet)+'</td><td>'+escHtml(nom.substring(0,25)||'—')+'</td><td style="font-size:11px;font-family:monospace">'+escHtml(ref.substring(0,20)||'—')+'</td><td style="font-size:11px">'+escHtml(dateVal||'—')+(importTypeNow==='sdl'?' <span style="color:#94a3b8;font-size:9px">(paiement)</span>':'')+'</td><td class="amt">'+(mnt?fmt(mnt):'—')+'</td><td>'+pillM(moyen)+'</td><td>'+valIcon+'</td></tr>';
       }).join('');
       _importedRows = rows;
     } catch(err) { alert('Erreur lecture fichier : '+err.message); }
@@ -3321,7 +3335,8 @@ function confirmImport() { if (!guardEdit('import')) return;
     if (importType === 'sdl') {
       var delai = String(r.row[4]||'').replace(/[^\d]/g,'') || '0';
       var dateFacture = String(r.row[1]||'').trim();
-      var echeance = addDaysISO(dateFacture, delai);
+      var dateFournie = String(r.row[5]||'').trim();
+      var echeance = /^\d{4}-\d{2}-\d{2}/.test(dateFournie) ? dateFournie : addDaysISO(dateFacture, delai);
       var targetMonth = monthLabelFromDate(echeance) || monthLabelFromDate(dateFacture) || currentMonth;
       getM(targetMonth).sdl.push({id:Date.now()+added, nom:nom, montant:mnt, date:dateFacture, delai:delai, moyen:'Virement', statut:'En retard'});
       distributed[targetMonth] = (distributed[targetMonth]||0) + 1;
