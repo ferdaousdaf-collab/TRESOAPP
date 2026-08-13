@@ -475,25 +475,25 @@ thead th{position:sticky!important;top:0!important;z-index:30!important;backgrou
   </div>
   <div class="nav">
     <div class="ns">Tableau de bord</div>
-    <div class="ni" onclick="nav('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Vue globale</div>
-    <div class="ni" onclick="nav('alertes',this)"><i class="ti ti-bell"></i>Alertes<span class="badge-alert" id="badge-alert" style="display: inline;">18</span></div>
-    <div class="ni" onclick="nav('banque',this)"><i class="ti ti-building-bank"></i>Comptes bancaires</div>
-    <div class="ni" onclick="nav('prevision',this)"><i class="ti ti-trending-up"></i>Prévisions 30/60/90j</div>
-    <div class="ni" onclick="nav('budget',this)"><i class="ti ti-target"></i>Budget vs Réalisé</div>
-    <div class="ni" onclick="nav('analyse',this)"><i class="ti ti-chart-pie"></i>Analyse &amp; Diagrammes</div>
-    <div class="ni" onclick="nav('comparatif',this)"><i class="ti ti-chart-bar"></i>Comparatif mensuel</div>
+    <div class="ni" id="ni-dashboard" onclick="nav('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Vue globale</div>
+    <div class="ni" id="ni-alertes" onclick="nav('alertes',this)"><i class="ti ti-bell"></i>Alertes<span class="badge-alert" id="badge-alert" style="display: inline;">18</span></div>
+    <div class="ni" id="ni-banque" onclick="nav('banque',this)"><i class="ti ti-building-bank"></i>Comptes bancaires</div>
+    <div class="ni" id="ni-prevision" onclick="nav('prevision',this)"><i class="ti ti-trending-up"></i>Prévisions 30/60/90j</div>
+    <div class="ni" id="ni-budget" onclick="nav('budget',this)"><i class="ti ti-target"></i>Budget vs Réalisé</div>
+    <div class="ni" id="ni-analyse" onclick="nav('analyse',this)"><i class="ti ti-chart-pie"></i>Analyse &amp; Diagrammes</div>
+    <div class="ni" id="ni-comparatif" onclick="nav('comparatif',this)"><i class="ti ti-chart-bar"></i>Comparatif mensuel</div>
     <div class="ns">Saisie</div>
-    <div class="ni" onclick="nav('import',this)"><i class="ti ti-file-upload"></i>Import Excel</div>
-    <div class="ni" onclick="nav('encaiss',this)"><i class="ti ti-arrow-down-circle"></i>Encaissements</div>
-    <div class="ni" onclick="nav('frs',this)"><i class="ti ti-building-store"></i>Fournisseurs</div>
-    <div class="ni active" onclick="nav('charges',this)"><i class="ti ti-receipt"></i>Charges fixes</div>
-    <div class="ni" onclick="nav('sdl',this)"><i class="ti ti-clock-exclamation"></i>S.DL Paiement</div>
+    <div class="ni" id="ni-import" onclick="nav('import',this)"><i class="ti ti-file-upload"></i>Import Excel</div>
+    <div class="ni" id="ni-encaiss" onclick="nav('encaiss',this)"><i class="ti ti-arrow-down-circle"></i>Encaissements</div>
+    <div class="ni" id="ni-frs" onclick="nav('frs',this)"><i class="ti ti-building-store"></i>Fournisseurs</div>
+    <div class="ni active" id="ni-charges" onclick="nav('charges',this)"><i class="ti ti-receipt"></i>Charges fixes</div>
+    <div class="ni" id="ni-sdl" onclick="nav('sdl',this)"><i class="ti ti-clock-exclamation"></i>S.DL Paiement</div>
     <div class="ns">Synthèse &amp; Gestion</div>
-    <div class="ni" onclick="nav('recap',this)"><i class="ti ti-file-text"></i>Récapitulatif</div>
-    <div class="ni" onclick="nav('rapport',this)"><i class="ti ti-report"></i>Rapport Direction</div>
-    <div class="ni" onclick="nav('historique',this)"><i class="ti ti-history"></i>Historique</div>
-    <div class="ni" onclick="nav('bibliotheque',this)"><i class="ti ti-books"></i>Bibliothèque</div>
-    <div class="ni" onclick="nav('settings',this)"><i class="ti ti-settings"></i>Paramètres</div>
+    <div class="ni" id="ni-recap" onclick="nav('recap',this)"><i class="ti ti-file-text"></i>Récapitulatif</div>
+    <div class="ni" id="ni-rapport" onclick="nav('rapport',this)"><i class="ti ti-report"></i>Rapport Direction</div>
+    <div class="ni" id="ni-historique" onclick="nav('historique',this)"><i class="ti ti-history"></i>Historique</div>
+    <div class="ni" id="ni-bibliotheque" onclick="nav('bibliotheque',this)"><i class="ti ti-books"></i>Bibliothèque</div>
+    <div class="ni" id="ni-settings" onclick="nav('settings',this)"><i class="ti ti-settings"></i>Paramètres</div>
     <div class="ni" id="ni-users" onclick="nav('users',this)" style="display:none;"><i class="ti ti-users"></i>Utilisateurs</div>
   </div>
   <div class="sb-foot">
@@ -706,7 +706,21 @@ thead th{position:sticky!important;top:0!important;z-index:30!important;backgrou
 
 <!-- ============================================================ IMPORT EXCEL -->
 <div class="page" id="page-import" style="display: none; height: auto; max-height: none; overflow: visible; margin-top: 0px; padding-top: 0px; min-height: 0px;">
-  <div class="alert-box al-blue"><i class="ti ti-info-circle"></i> Importez votre fichier Excel mensuel. Colonnes attendues : Fournisseur, Date, N° Règlement, Montant, Moyen, Statut. Validation avancée activée.</div>
+  <div class="alert-box al-blue"><i class="ti ti-info-circle"></i> Importez votre fichier Excel. Chaque ligne est automatiquement placée dans le mois correspondant à sa date d'échéance — vous n'avez pas besoin de changer de mois avant d'importer.</div>
+  <div class="card" style="padding:14px 16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Type de données à importer</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="radio" name="importType" id="importTypeEnc" value="enc"> Encaissements</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="radio" name="importType" id="importTypeFrs" value="frs" checked> Fournisseurs</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="radio" name="importType" id="importTypeChf" value="chf"> Charges fixes</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;"><input type="radio" name="importType" id="importTypeSdl" value="sdl"> S.DL Paiement</label>
+    </div>
+    <div style="font-size:10.5px;color:#94a3b8;margin-top:8px;">
+      Colonnes attendues — Encaissements/Fournisseurs : Nom, Date, Référence, Montant, Moyen &nbsp;|&nbsp;
+      Charges fixes : Rubrique, Bénéficiaire, Date, Montant, Moyen &nbsp;|&nbsp;
+      S.DL Paiement : Fournisseur, Date facture, N° Facture, Montant, Délai (j)
+    </div>
+  </div>
   <div class="upload-z" onclick="document.getElementById('xlsxFile').click()">
     <input type="file" id="xlsxFile" accept=".xlsx,.xls,.csv" onchange="handleFile(this)">
     <i class="ti ti-file-spreadsheet"></i>
@@ -1768,6 +1782,12 @@ function populateUserSelect() {
 function ROLE_LABEL(r) { return r==='DA' ? 'Accès total' : r==='SAISIE' ? 'Saisie' : 'Consultation'; }
 const PERM_MODULES = ['enc','frs','chf','sdl','banque','import'];
 const PERM_MODULE_LABELS = {enc:'Encaissements', frs:'Fournisseurs', chf:'Charges fixes', sdl:'S.DL Paiement', banque:'Comptes bancaires', import:'Import Excel'};
+const VIEW_PAGES = ['dashboard','alertes','prevision','budget','analyse','comparatif','recap','rapport','historique','bibliotheque','settings'];
+const VIEW_PAGE_LABELS = {
+  dashboard:'Tableau de bord — Vue globale', alertes:'Alertes', prevision:'Prévisions 30/60/90j', budget:'Budget vs Réalisé',
+  analyse:'Analyse & Diagrammes', comparatif:'Comparatif mensuel', recap:'Récapitulatif', rapport:'Rapport Direction',
+  historique:'Historique', bibliotheque:'Bibliothèque', settings:'Paramètres'
+};
 function defaultPerm(role, module) {
   if (role === 'DA') return {c:true, e:true, d:true};
   if (role === 'SAISIE') return {c:true, e:true, d:false};
@@ -1845,6 +1865,10 @@ function applyRoleRestrictions() {
     var el = document.getElementById(id);
     if (el) el.style.display = canCreateM(map[id]) ? '' : 'none';
   });
+  VIEW_PAGES.forEach(function(page){
+    var ni = document.getElementById('ni-'+page);
+    if (ni) ni.style.display = canViewPage(page) ? '' : 'none';
+  });
 }
 
 function renderUsersPage() {
@@ -1877,16 +1901,25 @@ function rightsModal(i) {
       '<td style="padding:6px 8px;text-align:center"><input type="checkbox" class="rm-chk" data-m="' + m + '" data-a="d" ' + (custom.d ? 'checked' : '') + '></td>' +
     '</tr>';
   }).join('');
+  var viewRows = VIEW_PAGES.map(function(p) {
+    var checked = (u.views && (p in u.views)) ? u.views[p] : true;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 4px;border-bottom:1px solid #f6f8f9;cursor:pointer;">' +
+      '<input type="checkbox" class="rv-chk" data-p="' + p + '" ' + (checked ? 'checked' : '') + '> ' + VIEW_PAGE_LABELS[p] +
+    '</label>';
+  }).join('');
   var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid #f6f8f9;padding-bottom:12px;">' +
       '<h3 style="font-size:15px;font-weight:800;">Droits par onglet — ' + escHtml(u.name) + '</h3>' +
       '<button onclick="closeRightsModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#94a3b8;line-height:1">×</button>' +
     '</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    '<div style="font-size:11.5px;font-weight:700;color:#2f5d7c;margin-bottom:6px;">Saisie — Créer / Modifier / Supprimer</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">' +
       '<thead><tr style="text-align:left;font-size:10px;text-transform:uppercase;color:#64748b;border-bottom:2px solid #f6f8f9;">' +
         '<th style="padding:6px 8px">Onglet</th><th style="padding:6px 8px;text-align:center">Créer</th><th style="padding:6px 8px;text-align:center">Modifier</th><th style="padding:6px 8px;text-align:center">Supprimer</th>' +
       '</tr></thead><tbody>' + rows + '</tbody>' +
     '</table>' +
-    '<div style="font-size:11px;color:#64748b;margin-top:10px;">Ces droits complètent le rôle général (' + ROLE_LABEL(u.role) + '). Décochez pour restreindre un onglet précis.</div>' +
+    '<div style="font-size:11.5px;font-weight:700;color:#2f5d7c;margin-bottom:6px;">Tableau de bord, Synthèse &amp; Gestion — Accès à la page</div>' +
+    '<div>' + viewRows + '</div>' +
+    '<div style="font-size:11px;color:#64748b;margin-top:10px;">Ces droits complètent le rôle général (' + ROLE_LABEL(u.role) + '). Décochez pour restreindre un onglet ou une page précise.</div>' +
     '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">' +
       '<button onclick="closeRightsModal()" style="padding:8px 18px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;cursor:pointer;font-weight:500">Annuler</button>' +
       '<button onclick="saveRightsModal(' + i + ')" style="padding:8px 18px;border-radius:7px;border:none;background:#2f5d7c;color:#fff;font-size:12px;font-weight:600;cursor:pointer">✓ Enregistrer</button>' +
@@ -1950,11 +1983,17 @@ function saveRightsModal(i) {
       d: document.querySelector('.rm-chk[data-m="'+m+'"][data-a="d"]').checked
     };
   });
+  var views = {};
+  VIEW_PAGES.forEach(function(p) {
+    var chk = document.querySelector('.rv-chk[data-p="'+p+'"]');
+    views[p] = chk ? chk.checked : true;
+  });
   USERS[i].perms = perms;
+  USERS[i].views = views;
   saveDB();
   addHistory('UTILISATEUR', 'Droits par onglet modifiés : '+USERS[i].name, 'edit');
   closeRightsModal();
-  if (CURRENT_USER && CURRENT_USER.name === USERS[i].name) applyRoleRestrictions();
+  if (CURRENT_USER && CURRENT_USER.name === USERS[i].name) { CURRENT_USER.views = views; applyRoleRestrictions(); }
 }
 
 function addUser() {
@@ -2011,8 +2050,19 @@ function changeOwnPwd() {
 // ================================================================
 // NAVIGATION
 // ================================================================
+function canViewPage(page) {
+  if (!VIEW_PAGES.includes(page)) return true; // pages hors périmètre des droits (banque/import/etc déjà gérées ailleurs)
+  if (!CURRENT_USER) return false;
+  var idx = USERS.findIndex(function(u){ return u.name === CURRENT_USER.name; });
+  if (idx < 0) return true;
+  var views = USERS[idx].views;
+  if (!views || !(page in views)) return true; // par défaut, accès autorisé sauf restriction explicite
+  return !!views[page];
+}
+
 function nav(page, el) {
   if (page === 'users' && !isAdmin()) { alert('Accès réservé au rôle Accès total (DA).'); page = 'dashboard'; el = null; }
+  if (!canViewPage(page)) { alert("Vous n'avez pas accès à cette page. Contactez la Directrice Adjointe."); return; }
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('active');});
   document.getElementById('page-'+page).classList.add('active');
@@ -3224,29 +3274,96 @@ function handleFile(input) {
   reader.readAsArrayBuffer(file);
 }
 
+const MOIS_NOMS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+function monthLabelFromDate(dateStr) {
+  if (!dateStr) return null;
+  var m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  var year = m[1], monthIdx = parseInt(m[2],10)-1;
+  if (monthIdx < 0 || monthIdx > 11) return null;
+  var label = MOIS_NOMS[monthIdx] + ' ' + year;
+  return MONTHS.indexOf(label) >= 0 ? label : null;
+}
+function addDaysISO(dateStr, days) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + (parseInt(days,10)||0));
+  return d.toISOString().slice(0,10);
+}
+
 function confirmImport() { if (!guardEdit('import')) return;
   if (!_importedRows.length) { alert('Aucun fichier chargé'); return; }
-  var d = getM(currentMonth);
-  var added = 0;
+  var importType = document.getElementById('importTypeSdl').checked ? 'sdl'
+    : document.getElementById('importTypeChf').checked ? 'chf'
+    : document.getElementById('importTypeEnc').checked ? 'enc'
+    : 'frs';
+  var added = 0, distributed = {};
+  var TYPE_LABELS = {enc:'Encaissements', frs:'Fournisseurs', chf:'Charges fixes', sdl:'S.DL'};
+
+  function detectMoyen(ref, extra) {
+    var moyen = 'Virement';
+    if(/lcn/i.test(ref)||/lcn/i.test(extra))moyen='LCN';
+    else if(/effet/i.test(ref))moyen='Effet';
+    else if(/cheque|chèque/i.test(ref))moyen='Chèque';
+    else if(/leasing|rci/i.test(extra))moyen='Leasing';
+    else if(/espèce|espece|cash/i.test(extra))moyen='Espèces';
+    else if(/prélèvement|prelevement/i.test(extra))moyen='Prélèvement';
+    if(extra&&extra.trim()&&['TRUE','FALSE','true','false'].indexOf(extra.trim())<0&&!/^\d+$/.test(extra.trim())) moyen=extra.trim();
+    return moyen;
+  }
+
   _importedRows.forEach(function(r) {
     var nom = String(r.row[0]||'').trim();
     var mnt = parseFloat(String(r.row[3]).replace(/[^\d.,-]/g,'').replace(',','.'));
     if (!nom || isNaN(mnt) || mnt <= 0) return;
-    var ref = String(r.row[2]||'');
-    var moyen = 'Virement';
-    if(/lcn/i.test(ref)||/lcn/i.test(String(r.row[4]||'')))moyen='LCN';
-    else if(/effet/i.test(ref))moyen='Effet';
-    else if(/cheque|chèque/i.test(ref))moyen='Chèque';
-    else if(/leasing|rci/i.test(String(r.row[4]||'')))moyen='Leasing';
-    else if(/espèce|espece|cash/i.test(String(r.row[4]||'')))moyen='Espèces';
-    else if(/prélèvement|prelevement/i.test(String(r.row[4]||'')))moyen='Prélèvement';
-    if(r.row[4]&&String(r.row[4]).trim()&&['TRUE','FALSE','true','false'].indexOf(String(r.row[4]).trim())<0&&!/^\d+$/.test(String(r.row[4]).trim())) moyen=String(r.row[4]).trim();
-    d.frs.push({id:Date.now()+added, nom:nom, ref:ref, date:String(r.row[1]||''), moyen:moyen, montant:mnt, statut:'À décaisser'});
-    memorize(nom); added++;
+
+    if (importType === 'sdl') {
+      var delai = String(r.row[4]||'').replace(/[^\d]/g,'') || '0';
+      var dateFacture = String(r.row[1]||'').trim();
+      var echeance = addDaysISO(dateFacture, delai);
+      var targetMonth = monthLabelFromDate(echeance) || monthLabelFromDate(dateFacture) || currentMonth;
+      getM(targetMonth).sdl.push({id:Date.now()+added, nom:nom, montant:mnt, date:dateFacture, delai:delai, moyen:'Virement', statut:'En retard'});
+      distributed[targetMonth] = (distributed[targetMonth]||0) + 1;
+      memorize(nom);
+
+    } else if (importType === 'chf') {
+      // Colonnes : Rubrique(0), Bénéficiaire(1)->utilisé comme "nom", Date(2), Montant(3), Moyen(4)
+      var rubrique = nom; // col0 = rubrique pour ce type
+      var ben = String(r.row[1]||'').trim();
+      if (!ben) return;
+      var dateC = String(r.row[2]||'').trim();
+      var mntC = parseFloat(String(r.row[3]).replace(/[^\d.,-]/g,'').replace(',','.'));
+      if (isNaN(mntC) || mntC <= 0) return;
+      var moyenC = detectMoyen('', String(r.row[4]||''));
+      var targetMonthC = monthLabelFromDate(dateC) || currentMonth;
+      getM(targetMonthC).chf.push({id:Date.now()+added, rubrique:rubrique, ben:ben, date:dateC, moyen:moyenC, montant:mntC, statut:'À décaisser'});
+      distributed[targetMonthC] = (distributed[targetMonthC]||0) + 1;
+
+    } else if (importType === 'enc') {
+      var refE = String(r.row[2]||'');
+      var moyenE = detectMoyen(refE, String(r.row[4]||''));
+      var dateE = String(r.row[1]||'').trim();
+      var targetMonthE = monthLabelFromDate(dateE) || currentMonth;
+      getM(targetMonthE).enc.push({id:Date.now()+added, client:nom, date:dateE, montant:mnt, moyen:moyenE, ref:refE, statut:'À encaisser'});
+      distributed[targetMonthE] = (distributed[targetMonthE]||0) + 1;
+      memorize(nom);
+
+    } else { // frs
+      var ref = String(r.row[2]||'');
+      var moyen = detectMoyen(ref, String(r.row[4]||''));
+      var dateVal = String(r.row[1]||'').trim();
+      var targetMonthF = monthLabelFromDate(dateVal) || currentMonth;
+      getM(targetMonthF).frs.push({id:Date.now()+added, nom:nom, ref:ref, date:dateVal, moyen:moyen, montant:mnt, statut:'À décaisser'});
+      distributed[targetMonthF] = (distributed[targetMonthF]||0) + 1;
+      memorize(nom);
+    }
+    added++;
   });
-  addHistory('IMPORT EXCEL', added + ' lignes importées dans ' + currentMonth, 'import');
+  var detail = Object.keys(distributed).map(function(m){return m+' : '+distributed[m]+' ligne(s)';}).join(' | ');
+  addHistory('IMPORT EXCEL', added + ' lignes (' + TYPE_LABELS[importType] + ') réparties automatiquement — ' + detail, 'import');
   saveDB(); refreshAll();
-  alert(added + ' lignes importées dans ' + currentMonth + ' !');
+  alert(added + ' lignes importées et réparties automatiquement par mois :\n' + detail);
   document.getElementById('import-res').style.display='none';
   document.getElementById('import-validation').style.display='none';
   document.getElementById('xlsxFile').value='';
@@ -4316,24 +4433,85 @@ tr:hover td{background:#fafafa!important;}
 </div>
 <script>
 var CHAT_FAQ = [
-  { k:['ajouter','saisir','encaissement','nouveau'], a:"Pour ajouter une opération : ouvrez l'onglet concerné (Encaissements, Fournisseurs, Charges fixes, S.DL Paiement, Comptes bancaires) puis cliquez sur « Ajouter ». Le bouton n'apparaît que si vos droits pour cet onglet incluent « Créer »." },
-  { k:['droit','rôle','permission','accès','consultation','saisie'], a:"Trois rôles existent : DA (accès total), SAISIE (ajout/modification), CONSULTATION (lecture seule). Depuis « Utilisateurs → Droits par onglet », la DA peut aussi affiner Créer/Modifier/Supprimer onglet par onglet, pour chaque personne." },
-  { k:['facilité','plafond','découvert'], a:"Le plafond de facilité de caisse se règle par compte bancaire : ouvrez « Modifier » sur un compte dans Comptes bancaires, et saisissez son plafond. Le panneau Facilité de caisse agrège ensuite tous les comptes concernés." },
-  { k:['utilisateur','compte','créer un compte','ajouter un utilisateur'], a:"Depuis « Utilisateurs » (visible uniquement pour le rôle DA), remplissez nom + mot de passe + rôle puis cliquez sur « Créer le compte »." },
+  { k:['ajouter','saisir','nouveau','créer une opération'], a:"Pour ajouter une opération : ouvrez l'onglet concerné (Encaissements, Fournisseurs, Charges fixes, S.DL Paiement, Comptes bancaires) puis cliquez sur « Ajouter ». Le bouton n'apparaît que si vos droits pour cet onglet incluent « Créer »." },
+  { k:['droit','rôle','permission','consultation','saisie'], a:"Trois rôles existent : DA (accès total), SAISIE (ajout/modification), CONSULTATION (lecture seule). Depuis « Utilisateurs → Droits par onglet », la DA peut aussi affiner Créer/Modifier/Supprimer pour chaque rubrique de saisie, et cocher/décocher l'accès à chaque page (Tableau de bord, Alertes, Prévisions, Budget, Analyse, Comparatif, Récapitulatif, Rapport, Historique, Bibliothèque, Paramètres) pour chaque utilisateur." },
+  { k:['accès','page','voir la page','ne voit pas'], a:"L'accès à chaque page se règle dans Utilisateurs → Droits par onglet, section « Tableau de bord, Synthèse & Gestion ». Décochez une page pour qu'elle disparaisse du menu de la personne concernée." },
+  { k:['facilité','plafond','découvert'], a:"Le plafond de facilité de caisse se règle par compte bancaire : ouvrez « Modifier » sur un compte dans Comptes bancaires, et saisissez son plafond. Le panneau Facilité de caisse agrège ensuite tous les comptes concernés, et le Solde global en tient compte." },
+  { k:['confidentialité','masquer','cacher','salaire'], a:"Depuis Utilisateurs → « Confidentialité », vous pouvez masquer pour une personne précise les soldes bancaires/facilité de caisse et/ou les salaires (Charges du personnel), quels que soient ses autres droits." },
+  { k:['utilisateur','ajouter un utilisateur','nouveau compte'], a:"Depuis « Utilisateurs » (visible uniquement pour le rôle DA), remplissez nom + mot de passe + rôle puis cliquez sur « Créer le compte »." },
   { k:['mot de passe','password'], a:"Chacun peut changer son propre mot de passe depuis Utilisateurs → « Mon mot de passe »." },
-  { k:['import','excel'], a:"Le menu « Import Excel » permet d'importer vos données depuis un fichier Excel existant, avec vérification avant validation." },
-  { k:['export','pdf','situation globale'], a:"Les boutons en haut à droite permettent d'exporter en PDF, PDF Situation globale, CSV, Excel ou Backup JSON." },
-  { k:['relance','échéance','retard','impayé'], a:"L'onglet S.DL Paiement liste les créances avec leur délai ; le bouton relance permet de marquer une relance envoyée à un client." },
-  { k:['sauvegarde','autosave','portable'], a:"Vos données sont sauvegardées automatiquement dans ce fichier (localStorage du navigateur). Pensez à « Copie portable » régulièrement pour avoir un fichier à jour et le transporter." },
+  { k:['import','excel'], a:"Le menu « Import Excel » importe vos données pour 4 rubriques : Encaissements, Fournisseurs, Charges fixes, S.DL Paiement. Choisissez le type avant d'importer. Chaque ligne est automatiquement placée dans le bon mois selon sa date, pas besoin de changer de mois avant." },
+  { k:['export','pdf','csv'], a:"Les boutons en haut à droite permettent d'exporter en PDF, PDF Situation globale, CSV, Excel ou Backup JSON complet." },
+  { k:['relance','échéance','retard','impayé'], a:"L'onglet S.DL Paiement liste les créances avec leur délai ; le bouton relance permet de marquer une relance envoyée. Le statut passe automatiquement En cours / Échéance proche / En retard selon la date." },
+  { k:['sauvegarde','autosave','portable'], a:"Vos données sont sauvegardées automatiquement dans ce fichier (localStorage du navigateur), et restent prioritaires même si vous recevez une mise à jour de l'application. Pensez quand même à « Copie portable » régulièrement pour avoir un fichier à jour et le transporter, ou « Backup JSON » pour une sauvegarde de secours." },
+  { k:['restaurer','backup','json'], a:"Dans Paramètres → Sauvegarde & Restauration JSON, vous pouvez exporter une sauvegarde complète, ou en restaurer une (cela remplace toutes les données actuelles, à utiliser avec précaution)." },
+  { k:['prévision','30','60','90'], a:"L'onglet Prévisions 30/60/90j projette votre trésorerie sur les 3 prochains mois selon les encaissements/décaissements déjà saisis." },
+  { k:['budget','réalisé'], a:"L'onglet Budget vs Réalisé compare vos prévisions budgétaires aux montants réellement encaissés/décaissés, rubrique par rubrique." },
+  { k:['analyse','diagramme','graphique','camembert'], a:"L'onglet Analyse & Diagrammes affiche la répartition par statut des fournisseurs et charges fixes sous forme de graphiques." },
+  { k:['comparatif','mensuel','comparer les mois'], a:"L'onglet Comparatif mensuel affiche encaissements/décaissements/solde net pour chacun des 24 mois disponibles (2026-2027), avec un graphique." },
+  { k:['récapitulatif','recap'], a:"L'onglet Récapitulatif résume le mois sélectionné : encaissements, fournisseurs, charges fixes, S.DL, solde bancaire, facilités de caisse et solde global, en un coup d'œil." },
+  { k:['rapport direction'], a:"L'onglet Rapport Direction génère une synthèse formatée pour présentation, exportable en PDF." },
+  { k:['historique'], a:"L'onglet Historique liste chronologiquement toutes les actions effectuées dans l'application (ajouts, modifications, suppressions, imports, connexions)." },
+  { k:['bibliothèque'], a:"L'onglet Bibliothèque conserve vos notes et documents de référence liés à la trésorerie." },
+  { k:['mois','année','exercice','sélecteur'], a:"En haut du menu, le sélecteur de mois (avec les boutons − / +) permet de naviguer entre Janvier 2026 et Décembre 2027. Chaque mois a ses propres données." },
+  { k:['banque','compte bancaire','solde bancaire'], a:"L'onglet Comptes bancaires liste tous vos comptes avec solde actuel, plafond de facilité de caisse, montant utilisé et disponible. Cliquez « Modifier » pour ajuster un compte." },
+  { k:['alerte'], a:"L'onglet Alertes signale automatiquement les situations à surveiller : échéances proches, soldes bas, facilités fortement utilisées." },
+  { k:['chatbot','assistant','tu es qui','qui es-tu'], a:"Je suis l'assistant intégré de TrésoApp. Je réponds uniquement à partir des données de cette application et de son fonctionnement — je ne me connecte à aucun service extérieur, vos données restent privées." },
 ];
+
+// Questions dynamiques : réponses calculées à partir des vraies données de l'app
+function chatDynamicAnswer(q){
+  var ql = q.toLowerCase();
+  var d = getM(currentMonth);
+  var c = calcTresorerie(d);
+
+  if (/qui suis-je|mon rôle|mon compte|je suis connecté/.test(ql)) {
+    return CURRENT_USER ? ('Vous êtes connecté en tant que ' + CURRENT_USER.name + ', rôle ' + ROLE_LABEL(CURRENT_USER.role) + '.') : "Vous n'êtes pas connecté.";
+  }
+  if (/quel mois|mois (actuel|en cours|sélectionné)/.test(ql)) {
+    return 'Le mois actuellement sélectionné est ' + currentMonth + '.';
+  }
+  if (/(solde|trésorerie).*(global|total)|global.*solde/.test(ql)) {
+    if (!canSeeBank()) return "Le solde global est masqué pour votre compte.";
+    return 'Le solde global de ' + currentMonth + ' (facilités de caisse incluses) est de ' + fmtM(c.global) + '.';
+  }
+  if (/(combien|solde).*(banque|bancaire)/.test(ql)) {
+    if (!canSeeBank()) return "Les soldes bancaires sont masqués pour votre compte.";
+    return 'Le solde bancaire total de ' + currentMonth + ' est de ' + fmtM(c.bqTot) + ', avec ' + fmtM(c.bqPlafond) + ' de facilités de caisse disponibles en plus.';
+  }
+  if (/combien.*(fournisseur|frs).*(retard)|fournisseur.*retard/.test(ql)) {
+    var nbRetard = d.sdl.filter(function(x){return x.statut==='En retard';}).length;
+    var mntRetard = d.sdl.filter(function(x){return x.statut==='En retard';}).reduce(function(s,x){return s+x.montant;},0);
+    return nbRetard + ' créance(s) en retard en S.DL Paiement pour ' + currentMonth + ', pour un total de ' + fmtM(mntRetard) + '.';
+  }
+  if (/combien.*(encaissement)/.test(ql)) {
+    return d.enc.length + ' encaissement(s) saisi(s) pour ' + currentMonth + ', total ' + fmtM(c.enc) + '.';
+  }
+  if (/combien.*(fournisseur)/.test(ql) && !/retard/.test(ql)) {
+    return d.frs.length + ' ligne(s) fournisseur pour ' + currentMonth + ', total ' + fmtM(c.frs) + '.';
+  }
+  if (/combien.*(charge)/.test(ql)) {
+    return d.chf.length + ' charge(s) fixe(s) pour ' + currentMonth + ', total ' + fmtM(c.chf) + '.';
+  }
+  if (/combien.*(utilisateur|compte utilisateur)/.test(ql)) {
+    return USERS.length + ' utilisateur(s) enregistré(s) dans l\'application.';
+  }
+  if (/combien.*(banque|compte bancaire)/.test(ql)) {
+    return d.banques.length + ' compte(s) bancaire(s) enregistré(s) pour ' + currentMonth + '.';
+  }
+  return null;
+}
+
 function chatAnswer(q){
+  var dyn = chatDynamicAnswer(q);
+  if (dyn) return dyn;
   var ql = q.toLowerCase(); var best=null, bestScore=0;
   CHAT_FAQ.forEach(function(item){
     var score = item.k.filter(function(kw){return ql.indexOf(kw)>-1;}).length;
     if (score > bestScore) { bestScore = score; best = item; }
   });
   if (best) return best.a;
-  return "Je peux vous aider sur : ajouter une opération, les droits par onglet, la facilité de caisse, la création d'utilisateurs, les exports, les relances, ou la sauvegarde. Reformulez avec l'un de ces mots-clés.";
+  return "Je n'ai pas trouvé de réponse précise. Vous pouvez me demander par exemple : « quel est mon solde global ? », « combien de fournisseurs en retard ? », « comment gérer les droits ? », « comment importer un fichier ? », ou toute autre question sur le fonctionnement de TrésoApp.";
 }
 function chatAddMsg(text, who){
   var body = document.getElementById('chatBody');
@@ -4345,7 +4523,7 @@ function chatAddMsg(text, who){
 }
 function chatSuggestionsInit(){
   var wrap = document.getElementById('chatSuggestions');
-  var chips = ["Comment ajouter une opération ?","Comment gérer les droits ?","Facilité de caisse ?","Créer un utilisateur ?"];
+  var chips = ["Quel est mon solde global ?","Combien de fournisseurs en retard ?","Comment importer un fichier ?","Comment gérer les droits ?"];
   wrap.innerHTML = chips.map(function(c){return '<div class="chat-chip">'+c+'</div>';}).join('');
   wrap.querySelectorAll('.chat-chip').forEach(function(ch){ ch.onclick = function(){ chatSend(ch.textContent); }; });
 }
